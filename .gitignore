@@ -1,0 +1,46 @@
+# 临时文件
+*.tmp
+.DS_Store
+Thumbs.db
+
+# 日志
+*.log
+
+# 依赖
+node_modules/
+vendor/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+
+# 系统文件
+*.zip
+*.tar.gz
+
+# BlueCode / OpenCode 配置
+.bluecode-desktop/
+.opencode/
+
+# Python 临时文件
+*.py
+__pycache__/
+*.pyc
+
+# JSON 数据文件
+*.json
+
+# Excel 文件（非周报）
+*.xlsx
+*.xls
+
+# 其他非周报文件
+vchat日报/
+相关流程沟通/
+验收相关/
+效率提升.xlsx
+洞察-杨洁.xlsx
+非OS项目流程问题.xlsx
+精细交互体验专项周报.html
+OS交互设计部_工时汇总*.xlsx
