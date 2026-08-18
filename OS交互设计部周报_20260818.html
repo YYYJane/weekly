@@ -1,0 +1,712 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>OS交互设计部项目周报 | 2026.08.04 — 08.18</title>
+<style>
+  :root {
+    --bg: #f5f6f8;
+    --card-bg: #ffffff;
+    --text: #1a1a2e;
+    --text-secondary: #5a5a7a;
+    --border: #e8ecf1;
+    --accent: #2563eb;
+    --accent-light: #eff6ff;
+    --red: #dc2626;
+    --red-bg: #fef2f2;
+    --yellow: #d97706;
+    --yellow-bg: #fffbeb;
+    --green: #16a34a;
+    --green-bg: #f0fdf4;
+    --blue: #2563eb;
+    --blue-bg: #eff6ff;
+    --radius: 10px;
+    --shadow: 0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04);
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.6;
+    padding: 24px;
+  }
+  .container { max-width: 1100px; margin: 0 auto; }
+
+  /* Header */
+  .header {
+    background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
+    color: #fff;
+    border-radius: 14px;
+    padding: 36px 40px;
+    margin-bottom: 24px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+  }
+  .header h1 { font-size: 26px; font-weight: 700; letter-spacing: 0.5px; }
+  .header .meta { margin-top: 10px; font-size: 14px; color: #94a3b8; display: flex; gap: 32px; flex-wrap: wrap; }
+
+  /* Stats row */
+  .stats-row {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 10px;
+    margin-bottom: 24px;
+  }
+  .stat-card {
+    background: var(--card-bg);
+    border-radius: var(--radius);
+    padding: 14px 8px;
+    box-shadow: var(--shadow);
+    text-align: center;
+    cursor: pointer;
+    transition: transform 0.15s, box-shadow 0.15s, background 0.2s;
+    border: 2px solid transparent;
+  }
+  .stat-card:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+  .stat-card.active { background: var(--accent-light); border-color: var(--accent); }
+  .stat-card .num { font-size: 24px; font-weight: 700; color: var(--accent); }
+  .stat-card .label { font-size: 12px; color: var(--text-secondary); margin-top: 4px; }
+  .stat-card.warn .num { color: var(--red); }
+  .stat-card.ok .num { color: var(--green); }
+
+  .tab-content { display: none; }
+  .tab-content.active { display: block; }
+
+  /* Section */
+  .section {
+    background: var(--card-bg);
+    border-radius: var(--radius);
+    padding: 28px 32px;
+    margin-bottom: 20px;
+    box-shadow: var(--shadow);
+  }
+  .section-title {
+    font-size: 18px; font-weight: 700;
+    padding-bottom: 14px; margin-bottom: 20px;
+    border-bottom: 2px solid var(--border);
+    display: flex; align-items: center; gap: 10px;
+  }
+  .section-title .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--accent); }
+
+  /* Alert highlights */
+  .highlights { display: flex; gap: 12px; flex-wrap: wrap; }
+  .highlight-tag {
+    display: flex; align-items: center; gap: 6px;
+    padding: 8px 16px; border-radius: 20px;
+    font-size: 13px; font-weight: 600;
+  }
+  .highlight-tag.red { background: var(--red-bg); color: var(--red); }
+  .highlight-tag.yellow { background: var(--yellow-bg); color: var(--yellow); }
+  .highlight-tag.green { background: var(--green-bg); color: var(--green); }
+  .highlight-tag .badge { font-size: 16px; }
+
+  /* Tables */
+  table { width: 100%; border-collapse: collapse; font-size: 14px; }
+  th {
+    background: #f8fafc;
+    text-align: left; padding: 10px 14px;
+    font-weight: 600; color: var(--text-secondary);
+    border-bottom: 2px solid var(--border);
+    font-size: 13px; white-space: nowrap;
+  }
+  td { padding: 12px 14px; border-bottom: 1px solid #f1f5f9; vertical-align: top; }
+  tr:last-child td { border-bottom: none; }
+  tr:hover td { background: #fafbfc; }
+
+  /* Risk badges */
+  .risk { display: inline-block; padding: 3px 10px; border-radius: 12px; font-size: 12px; font-weight: 600; white-space: nowrap; }
+  .risk-high { background: var(--red-bg); color: var(--red); }
+  .risk-mid { background: var(--yellow-bg); color: var(--yellow); }
+  .risk-low { background: var(--green-bg); color: var(--green); }
+  .risk-info { background: var(--blue-bg); color: var(--blue); }
+
+  /* Status dots */
+  .status { display: inline-flex; align-items: center; gap: 5px; font-weight: 600; font-size: 13px; }
+  .status::before { content: ""; width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+  .status.green::before { background: var(--green); }
+  .status.yellow::before { background: var(--yellow); }
+  .status.red::before { background: var(--red); }
+
+  /* Progress */
+  .progress-bar { height: 6px; background: #e5e7eb; border-radius: 3px; margin-top: 6px; }
+  .progress-fill { height: 100%; border-radius: 3px; }
+  .progress-fill.green { background: var(--green); }
+  .progress-fill.yellow { background: var(--yellow); }
+  .progress-fill.blue { background: var(--blue); }
+
+  /* Timeline */
+  .timeline { display: flex; gap: 6px; flex-wrap: wrap; }
+  .timeline-item { font-size: 12px; padding: 4px 10px; background: #f1f5f9; border-radius: 12px; color: var(--text-secondary); white-space: nowrap; }
+  .timeline-item.now { background: var(--accent); color: #fff; font-weight: 600; }
+
+  /* subsection */
+  .sub-title { font-size: 15px; font-weight: 700; margin: 20px 0 12px; color: #334155; }
+  .sub-title:first-child { margin-top: 0; }
+
+  /* Lists */
+  .detail-list { list-style: none; padding: 0; }
+  .detail-list li { padding: 6px 0; font-size: 14px; display: flex; align-items: flex-start; gap: 8px; }
+  .detail-list li::before { content: "•"; color: var(--accent); font-weight: bold; flex-shrink: 0; }
+
+  /* Footer */
+  .footer { text-align: center; color: #94a3b8; font-size: 12px; padding: 20px 0 8px; }
+
+  /* Two-column grid */
+  .grid-2 { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
+
+  @media (max-width: 768px) {
+    .stats-row { grid-template-columns: repeat(2, 1fr); }
+    .header { padding: 24px 20px; }
+    .header h1 { font-size: 20px; }
+    .section { padding: 20px 16px; }
+    table { font-size: 12px; }
+    th, td { padding: 8px 10px; }
+    .tab-btn { font-size: 11px; padding: 8px 10px; }
+    .grid-2 { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <!-- ====== HEADER ====== -->
+  <div class="header">
+    <h1>📋 OS交互设计部 项目周报</h1>
+    <div class="meta">
+      <span>📅 报告周期：2026年8月4日 — 8月18日（双周）</span>
+      <span>👤 更新人：OS交互设计部</span>
+      <span>📌 数据来源：部门项目看板</span>
+    </div>
+  </div>
+
+  <!-- ====== STATS NAV ====== -->
+  <div class="stats-row">
+    <div class="stat-card active" onclick="switchTab('overview')" id="nav-overview"><div class="num">📋</div><div class="label">总体概览</div></div>
+    <div class="stat-card" onclick="switchTab('os')" id="nav-os"><div class="num">4</div><div class="label">OS项目（进行中）</div></div>
+    <div class="stat-card" onclick="switchTab('spd')" id="nav-spd"><div class="num">1</div><div class="label">其他SPD项目</div></div>
+    <div class="stat-card" onclick="switchTab('internal')" id="nav-internal"><div class="num">6</div><div class="label">部门内部专项</div></div>
+    <div class="stat-card warn" onclick="switchTab('risk')" id="nav-risk"><div class="num">2</div><div class="label">⚠️ 风险项需关注</div></div>
+    <div class="stat-card" onclick="switchTab('flagship')" id="nav-flagship"><div class="num">📱</div><div class="label">旗舰机型</div></div>
+    <div class="stat-card" onclick="switchTab('workload')" id="nav-workload"><div class="num">📊</div><div class="label">部门负荷</div></div>
+  </div>
+
+  <!-- ====== TAB: 总体概览 ====== -->
+  <div class="tab-content active" id="tab-overview">
+    <div class="section">
+      <div class="section-title"><span class="dot"></span>总体概览</div>
+      <p style="margin-bottom: 16px; color: var(--text-secondary); font-size: 14px;">
+        本双周部门共跟进 <strong>4个OS项目</strong>（另有4个已完成不关注） + <strong>1个其他SPD项目</strong> + <strong>6个部门内部专项</strong>，整体运行平稳。
+        <br><span style="font-size: 12px; color: #94a3b8;">以下仅展示存在风险、变更或重大里程碑的项目，其余正常推进的项目请查看对应 Tab。</span>
+      </p>
+      <div class="highlights">
+        <div class="highlight-tag yellow"><span class="badge">🟡</span> OS7o（SPD2632）方向调整中，8/25需求包锁定，PRD/策划/UI/动效基线全部待定，里程碑重置</div>
+        <div class="highlight-tag green"><span class="badge">🟢</span> OS7.0 Beta测试已启动，重点跟进用户反馈问题；二期56条推进中，8/20合格</div>
+        <div class="highlight-tag green"><span class="badge">🟢</span> Vlog云台相机 三批动效已转交，端侧&app侧交互需求升版，计划8/25定稿</div>
+        <div class="highlight-tag green"><span class="badge">🟢</span> Pad原子笔记 一期PRD/策划/UI/动效已定稿，二期推进中，8/19第一版专项测试</div>
+        <div class="highlight-tag green"><span class="badge">🟢</span> HIG专项 已完成53个章节，剩余8章；UI输出已完成47个；8/14完成部门内汇报，8/21面向Lance汇报</div>
+      </div>
+    </div>
+
+    <div class="section" style="margin-top: 16px;">
+      <div class="section-title"><span class="dot"></span>本双周变化</div>
+      <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px;">
+
+        <div>
+          <div class="sub-title">🆕 新增/启动</div>
+          <div style="font-size: 13px;">
+            <div style="padding: 8px 0;"><strong>OS7o · 需求包锁定倒计时</strong><br>8/25需求包锁定，产品团队成立专项细化到具体场景（录音机/会议/知识库底座/原子笔记/输入输出），8/10完成7o可用性测试沟通会议</div>
+          </div>
+        </div>
+
+        <div>
+          <div class="sub-title">🔄 调整/变更</div>
+          <div style="font-size: 13px;">
+            <div style="padding: 8px 0; border-bottom: 1px solid #f1f5f9;"><strong>Vlog云台相机 · 第三批变更需求UI定稿推迟</strong><br>端侧&app侧交互需求升版，UI阶段计划8/25定稿（原计划8/12）；续航手柄设置项待开发给结论</div>
+            <div style="padding: 8px 0;"><strong>Pad原子笔记 · 二期策划定稿</strong><br>二期PRD 8条已定稿，策划8条已定稿（8/12），UI基线8/6、动效基线8/20推进中</div>
+          </div>
+        </div>
+
+        <div>
+          <div class="sub-title">✅ 完成/交付</div>
+          <div style="font-size: 13px;">
+            <div style="padding: 8px 0; border-bottom: 1px solid #f1f5f9;"><strong>HIG · 部门内汇报完成</strong><br>8/14完成部门内专项进度汇报，整体已完成53个章节（新增1个），剩余8章；UI输出已完成47个（新增11个）；8/21面向Lance汇报</div>
+            <div style="padding: 8px 0; border-bottom: 1px solid #f1f5f9;"><strong>OS7.0 · Beta测试已启动</strong><br>8/11 Beta测试正式启动，当前问题数量少于6.0同期水平，暂无交互类严重问题；内部用户试用和外部用户beta测试已启动</div>
+            <div style="padding: 8px 0;"><strong>连接专项 · 分析报告输出中</strong><br>苹果连接体系资料库已搭建完成，典型案例搜集与原则总结进行中</div>
+          </div>
+        </div>
+
+        <div>
+          <div class="sub-title">⚠️ 风险/延期</div>
+          <div style="font-size: 13px;">
+            <div style="padding: 8px 0; border-bottom: 1px solid #f1f5f9;"><span class="risk risk-low">🟢</span> <strong>OS7o · 方向调整，里程碑重置</strong><br>wiki标注低风险：一期项目时间计划因需求范围未定；二期产品内部对知识库是否纳入需求包仍存在争议，需求范围未锁定；8/25需求包锁定，9月上旬charter汇报</div>
+            <div style="padding: 8px 0;"><span class="risk risk-mid">🟡</span> <strong>HIG · 剩余章节与上线风险</strong><br>整体61章已完成53个，剩余8章（设计理念、字体、原子通知、多设备连接、蓝心小v、小v建议、账号、动态照片）；设计理念内容需产品内部确认后出意见-8/18前；官网预上线8/30、9/1上线</div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- ====== TAB: 部门内部专项 ====== -->
+  <div class="tab-content" id="tab-internal">
+    <div class="section">
+      <div class="section-title"><span class="dot"></span>部门内部专项</div>
+      <table>
+        <thead>
+          <tr><th style="width:12%">专项</th><th style="width:10%">状态</th><th>专项当前状态</th><th>未来两周重点</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>🧠 HAI</strong></td>
+            <td><span class="status green">正常</span></td>
+            <td>
+              <strong>第一版规范已完成输出</strong>，包括任务流、图片生成、文本生成、对话模式的专家评审及AI攻防<br>
+              外部授课和V学堂线上课程上线已全部完成，26届大学生学习计划已安排<br>
+              创造力场景已推送；智能体决策·上篇7月初已推送；沟通场景/健康与健身场景/连接模型·上篇初稿已输出，初审调整中<br>
+              外部平台持续按1-2篇/月计划更新中
+            </td>
+            <td>完成第一版规范的内部宣讲；交互规范持续迭代更新；HAI账号持续推进；AI信息日常收集分析</td>
+          </tr>
+          <tr>
+            <td><strong>📐 HIG</strong></td>
+            <td><span class="status yellow">关注</span></td>
+            <td>
+              已由软件项目部牵头立项SPD2627，处于落地探索阶段<br>
+              需求包定稿60个章节，过程新增2个、删除1个，目前共61个章节；整体已完成53个，剩余8个（设计理念、字体、原子通知、多设备连接、蓝心小v、小v建议、账号、动态照片）<br>
+              部门负责37个章节，8/10前分三批全部定稿；UI输出已完成47个<br>
+              8/14已完成部门内专项进度汇报，8/21面向Lance汇报；官网8/10开发完成，预上线8/30，9/1上线<br>
+              跟进事项：①设计理念内容沟通：产品内部确认好后再同步出意见 - 8.18前；②汇报材料同步以及"控件"问题沟通 - 8.14完成；③网站视觉优化 - 产生具体问题后安排沟通
+            </td>
+            <td>剩余8章持续定稿；8/21面向Lance汇报；官网预上线8/30、9/1上线</td>
+          </tr>
+          <tr>
+            <td><strong>🎬 动效流畅</strong></td>
+            <td><span class="status green">正常</span></td>
+            <td>7.0动效包装素材已交付；iOS27分析6/22完成并汇报；第四次汇报7/16完成</td>
+            <td>动效体系7.0发布会前确定</td>
+          </tr>
+          <tr>
+            <td><strong>🤖 AI提效</strong></td>
+            <td><span class="status green">正常</span></td>
+            <td>
+              需求分析skill、策划输出skill已部门全面推广（7/30），方案设计skill此次不在推广范围<br>
+              专项团队同步撰写制作了MOSS平台及skill技能使用说明<br>
+              新方向三线并行：原型（邱昌鑫/赵洋洋/李凯华/蒙广智）、Skill改造（理高/陈丁/武柽珣）、知识库摸底（王茨/王世轩）
+            </td>
+            <td>需求分析skill和方案设计skill调整优化；知识库摸底；梳理原型分级框架及模块特性</td>
+          </tr>
+          <tr>
+            <td><strong>🔗 连接专项</strong></td>
+            <td><span class="status green">正常</span></td>
+            <td>7/28已完成苹果AI连接体系资料库搭建（借助AI）；三个连接时代和核心关键词已明确；二级维度已拆解完成，正在总结输出分析报告</td>
+            <td>典型案例搜集与原则总结；借助AI工具梳理内容</td>
+          </tr>
+          <tr>
+            <td><strong>📊 管理提效</strong></td>
+            <td><span class="status green">正常</span></td>
+            <td>
+              刷机流程及工具优化已正式发布<br>
+              对外合作：OS联合办公流程已达成一致；影像/A领域深入需求执行，合作问题回头看推进中；UI/GTM等待动效团队空闲<br>
+              内部优化：验收工具优化（提升效率与准确性）、工时填报精简（减少行政负担）推进中
+            </td>
+            <td>根据FPD准出评审意见、专项内容安排，持续推动各任务落地</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ====== TAB: OS项目详情 ====== -->
+  <div class="tab-content" id="tab-os">
+    <div class="section">
+      <div class="section-title"><span class="dot"></span>OS项目详情</div>
+
+      <div class="sub-title">🔑 进行中项目</div>
+      <table>
+        <thead>
+          <tr><th>项目</th><th>当前阶段</th><th>整体进度</th><th>关键里程碑</th><th>风险</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>SPD2601 OS7.0</strong></td>
+            <td>开发阶段</td>
+            <td>
+              一期43条需求已全部转交开发<br>二期56条需求推进中，8/20二期合格
+              <div class="progress-bar"><div class="progress-fill green" style="width:85%"></div></div>
+            </td>
+            <td>
+              <div class="timeline">
+                <span class="timeline-item">7.23 内部试用</span>
+                <span class="timeline-item">8.11 Beta测试启动</span>
+                <span class="timeline-item now">8.20 二期合格</span>
+                <span class="timeline-item">9.16 内测/OS发布会</span>
+                <span class="timeline-item">9.20 X500发布会</span>
+              </div>
+            </td>
+            <td><span class="risk risk-low">低</span></td>
+          </tr>
+          <tr>
+            <td><strong>SPD2632 OS7o</strong></td>
+            <td>立项阶段</td>
+            <td>
+              方向调整：拆到具体产品场景（录音机/会议/知识库底座/原子笔记/输入输出）<br>产品团队成立专项跟进，8/25需求包锁定
+              <div class="progress-bar"><div class="progress-fill yellow" style="width:15%"></div></div>
+            </td>
+            <td>
+              <div class="timeline">
+                <span class="timeline-item">8.25 需求包锁定</span>
+                <span class="timeline-item">9月上旬 charter汇报</span>
+                <span class="timeline-item">PRD/策划/UI/动效基线 待定</span>
+              </div>
+            </td>
+            <td><span class="risk risk-low">低</span></td>
+          </tr>
+          <tr>
+            <td><strong>SPD2526 Vlog云台相机</strong></td>
+            <td>一二批：开发阶段<br>第三批：动效阶段</td>
+            <td>
+              一二批94条已转交<br>三批27条：UI 25条已定稿，动效8/4已转交（涉及10条），第三批已进入动效阶段<br>端侧&app侧交互需求升版，UI阶段计划8/25定稿
+              <div class="progress-bar"><div class="progress-fill green" style="width:85%"></div></div>
+            </td>
+            <td>
+              <div class="timeline">
+                <span class="timeline-item">9.21 试产</span>
+                <span class="timeline-item">10.16 首量</span>
+                <span class="timeline-item">10.30 批量</span>
+                <span class="timeline-item">12月 上市</span>
+              </div>
+            </td>
+            <td><span class="risk risk-low">低</span></td>
+          </tr>
+          <tr>
+            <td><strong>SPD2623 Pad原子笔记</strong></td>
+            <td>开发阶段（一期）<br>UI阶段（二期）</td>
+            <td>
+              一期：PRD 26条、策划 26条、UI 24条、动效 16条<br>二期：PRD 8条、策划 8条（8/12定稿），UI基线8/6、动效基线8/20
+              <div class="progress-bar"><div class="progress-fill green" style="width:60%"></div></div>
+            </td>
+            <td>
+              <div class="timeline">
+                <span class="timeline-item">8.19 第一版专项测试</span>
+                <span class="timeline-item">10.17 试产</span>
+                <span class="timeline-item">27年1月 上市</span>
+              </div>
+            </td>
+            <td><span class="risk risk-low">低</span></td>
+          </tr>
+        </tbody>
+      </table>
+
+      <div class="sub-title" style="color: #9ca3af;">✅ 已完成项目（设计阶段已交付，不再关注）</div>
+      <table style="opacity: 0.55;">
+        <thead>
+          <tr><th>项目</th><th>设计交付状态</th><th>关键信息</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><strong>SPD2603 Pad OS7.0</strong></td><td><span class="status green">已交付</span></td><td>软件合格 6/30，iQOO Pad 试产 7/18，批量 9/14</td></tr>
+          <tr><td><strong>SPD2604 海外Pad OS</strong></td><td><span class="status green">已交付</span></td><td>113条移植需求，PRD/策划/UI/动效全部定稿；软件合格 7/3</td></tr>
+          <tr><td><strong>SPD2608 WATCH 6</strong></td><td><span class="status green">已交付</span></td><td>手表73条+APP 22条，手表端已交接；试产 5/16，首量 7/5，9月上市</td></tr>
+          <tr><td><strong>SPD2616 IQOO16 KPL定制机</strong></td><td><span class="status green">已交付</span></td><td>软件合格 7/25，首量 8/15，9月上市<br>注：不推出专门定制机及硬件定制，软件定制功能变更为在所有大货版本机器上上线</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="sub-title">🔍 OS7o 项目进展详情（SPD2632）</div>
+    <div class="grid-2" style="font-size: 14px; margin-bottom: 10px;">
+      <div style="padding: 12px; background: #fef3c7; border-radius: 8px; border-left: 3px solid var(--yellow);">
+        <strong>⚠️ 方向调整，里程碑重置</strong><br>PRD/策划/UI/动效基线全部待定，需重新排期
+      </div>
+      <div style="padding: 12px; background: #f8fafc; border-radius: 8px; border-left: 3px solid var(--blue);">
+        <strong>📋 当前状态</strong><br>要求拆到具体产品场景，产品团队已成立专项跟进；8/25需求包锁定，9月上旬charter汇报
+      </div>
+    </div>
+    <ul class="detail-list">
+      <li>产品方向：录音机、会议、音频知识库、知识库底座、原子笔记、输入输出</li>
+      <li>一期（X500S/U）：需求包基线8/25，PRD待定，策划待定，UI待定，动效待定，1/10软件合格，3月上市</li>
+      <li>二期（Fold7）：需求包基线9/16，PRD10/13，策划11/2，动效11/18，3/15软件合格，6月上市</li>
+      <li>低风险：一期项目时间计划因需求范围未定，项目时间计划未定；二期产品内部对知识库是否纳入需求包仍存在争议</li>
+    </ul>
+
+    <div class="sub-title">🔍 Vlog云台相机 项目进展详情（SPD2526）</div>
+    <div class="grid-2" style="font-size: 14px; margin-bottom: 10px;">
+      <div style="padding: 12px; background: #ecfdf5; border-radius: 8px; border-left: 3px solid var(--green);">
+        <strong>✅ 一二批需求已转交</strong><br>94条需求已全部进入开发
+      </div>
+      <div style="padding: 12px; background: #f8fafc; border-radius: 8px; border-left: 3px solid var(--blue);">
+        <strong>🎨 三批需求进入动效阶段</strong><br>UI 25条已定稿，动效8/4已转交（涉及10条），第三批整体已进入动效阶段<br>端侧&app侧交互需求涉及升版，UI阶段，计划8/25定稿（原计划8/12）；续航手柄需求拟新增设置项，待开发给结论
+      </div>
+    </div>
+    <div class="timeline" style="margin-top: 8px;">
+      <span class="timeline-item">9.21 试产</span>
+      <span class="timeline-item">10.16 首量</span>
+      <span class="timeline-item">10.30 批量</span>
+      <span class="timeline-item">12月 上市</span>
+    </div>
+
+    <div class="sub-title">🔍 Pad原子笔记 项目进展详情（SPD2623）</div>
+    <div style="padding: 12px; background: #f8fafc; border-radius: 8px; border-left: 3px solid var(--blue); font-size: 14px; margin-bottom: 10px;">
+      <strong>📋 当前阶段</strong><br>开发阶段（一期），UI阶段（二期），一期PRD/策划/UI/动效已定稿
+    </div>
+    <ul class="detail-list">
+      <li>一期：PRD 26条、策划 26条、UI 24条、动效 16条</li>
+      <li>二期：PRD 8条、策划 8条（8/12定稿），UI基线8/6、动效基线8/20</li>
+      <li>笔记AI助手变更：一期7/15 PRD定稿、7/22升版、7/24策划定稿；二期7/31 PRD升版、8/10 PRD升版、8/12策划定稿</li>
+      <li>关键节点：试产 10/17，首量 11/18，批量 11/30，上市 2027年1月</li>
+      <li>专项测试：第一版 8/19、第二版 9/1、第三版 9/10、第七版 10/14</li>
+      <li>可用性测试：demo部分（目录大纲、新建手写笔记、导入文档）8/13-8/18进行中；apk部分（AI语音记笔记）9/4开发提供</li>
+    </ul>
+
+    <div class="sub-title">🔍 OS7.0 需求进展详情（SPD2601）</div>
+
+    <div class="sub-title">一期需求（43条 → 38条功能需求 + 设计专项跟进）</div>
+    <table>
+      <thead><tr><th>基线类型</th><th>涉及条数</th><th>定稿状态</th></tr></thead>
+      <tbody>
+        <tr><td>PRD基线</td><td>25条</td><td><span class="status green">✅ 全部定稿</span></td></tr>
+        <tr><td>策划基线</td><td>25条</td><td><span class="status green">✅ 全部定稿</span></td></tr>
+        <tr><td>UI基线</td><td>27条</td><td><span class="status green">✅ 已定稿</span></td></tr>
+        <tr><td>动效基线</td><td>—</td><td><span class="status green">✅ 全部定稿</span></td></tr>
+      </tbody>
+    </table>
+    <p style="margin-top: 10px; font-size: 13px; color: var(--text-secondary);">
+      📦 转交情况：4月10日已转交37条，一期变更新增11条已进入开发阶段（控制中心自定义、连接中心组件优化、重要通知再上线、相册空间优化、AI萌宠等）<br>
+      最终一期需求：38条功能需求 + 设计专项，全部处于后端开发阶段
+    </p>
+
+    <div class="sub-title">二期需求（36条功能需求 + 设计专项）</div>
+    <ul class="detail-list">
+      <li>5/22 已转交25条</li>
+      <li>变更19条均在开发阶段（建议空间外销组件形态、记忆识屏、熄屏显示实时通知、关机改版、离线大模型V2.0、日历改版等）</li>
+      <li><span style="color: var(--yellow);">⚠️ 【多任务+AI】需求6/17暂停，待后续确认是否移入回音计划</span></li>
+      <li>安卓新特性导入：一期8条、二期2条，均在开发阶段</li>
+      <li>Beta测试反馈：内部用户试用和外部用户beta测试已启动，重点跟进用户反馈：问题数量少于6.0同期水平，暂无交互类严重问题；有3例控制中心相关的动画反馈，经内部分析为7.0新增动效设计，待继续跟进后续反馈</li>
+    </ul>
+
+    <div class="sub-title">OS7.0 设计专项</div>
+    <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; font-size: 14px;">
+      <div style="padding: 12px; background: #f8fafc; border-radius: 8px;">
+        <strong>🎬 原子动效专项</strong><br>一期：柔软效果6条动效已定稿、全局Spring 1条动效已定稿、模块Spring 4条动效已定稿，一镜到底5条转二期<br>二期：帧模糊/动效优化/真玻璃17条/通知卡片等推进中，模块Spring 4条动效已定稿，一镜到底4条动效已定稿，真玻璃17条UI已定稿、动效已定稿，通知卡片动效已定稿
+      </div>
+      <div style="padding: 12px; background: #f8fafc; border-radius: 8px;">
+        <strong>🎨 静态设计专项</strong><br>一期4条已全部定稿转交（4月10日节点）<br>二期：连接一致性（涉及9个模块）策划已定稿、UI已定稿3/4、动效已定稿3/4；互联网一致性（涉及4个模块）UI已定稿、动效已定稿<br><br><strong>├ 🤖 AIOS（静态设计子专项）</strong><br>公共规范（8月28日合格）已定稿<br>一期（8月28日合格，涉及15模块）：PRD 4条已定稿、策划 8条已定稿、UI 15条已定稿、动效 14条已定稿<br>二期（9月10日合格，涉及3模块）：策划 2条已定稿、UI 3条已定稿、动效 3条已定稿<br>三期（待定，涉及96模块）：PRD 1条已定稿、策划 14条已定稿、UI 39条已定稿、动效 7条已定稿<br>四期（待定，涉及85模块）：PRD 0条已定稿、策划 3条已定稿、UI 3条已定稿、动效 0条已定稿
+      </div>
+      <div style="padding: 12px; background: #f8fafc; border-radius: 8px;">
+        <strong>💎 液态玻璃专项</strong><br>一期11条、二期8条、回音4条全部定稿，动效导入专项跟进
+      </div>
+      <div style="padding: 12px; background: #f8fafc; border-radius: 8px;">
+        <strong>✨ 系统光影专项</strong><br>公控&材质光影规范已定稿，模块适配已定稿1/1<br>AI光影规范一期/二期已定稿，模块适配一期7条、二期18条已定稿
+      </div>
+    </div>
+  </div>
+
+  <!-- ====== TAB: 其他SPD项目 ====== -->
+  <div class="tab-content" id="tab-spd">
+    <div class="section">
+      <div class="section-title"><span class="dot"></span>其他SPD项目</div>
+      <div class="sub-title">SPD2614 精细交互体验专项</div>
+      <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 16px;">
+        <div style="padding: 14px; background: var(--blue-bg); border-radius: 8px; text-align: center;">
+          <div style="font-size: 28px; font-weight: 700; color: var(--blue);">46</div>
+          <div style="font-size: 13px; color: var(--text-secondary);">总下发需求</div>
+        </div>
+        <div style="padding: 14px; background: var(--green-bg); border-radius: 8px; text-align: center;">
+          <div style="font-size: 28px; font-weight: 700; color: var(--green);">22</div>
+          <div style="font-size: 13px; color: var(--text-secondary);">已合格</div>
+        </div>
+        <div style="padding: 14px; background: #fef3c7; border-radius: 8px; text-align: center;">
+          <div style="font-size: 28px; font-weight: 700; color: #d97706;">11</div>
+          <div style="font-size: 13px; color: var(--text-secondary);">开发阶段</div>
+        </div>
+        <div style="padding: 14px; background: #fee2e2; border-radius: 8px; text-align: center;">
+          <div style="font-size: 28px; font-weight: 700; color: var(--red);">2</div>
+          <div style="font-size: 13px; color: var(--text-secondary);">需求移除</div>
+        </div>
+      </div>
+      <div style="font-size: 14px; color: var(--text-secondary); margin-bottom: 12px;">需求分布：需求规划7条、PRD阶段2条、策划阶段1条、UI阶段1条、动效阶段1条、开发阶段11条、已合格22条（下发46条，移除2条）</div>
+      <div style="font-size: 14px; color: var(--text-secondary); margin-bottom: 12px;">四大专题方向：</div>
+      <div class="grid-2" style="font-size: 13px;">
+        <div style="padding: 10px 14px; background: #f8fafc; border-radius: 8px; border-left: 3px solid var(--blue);">
+          <strong>提升苹果流入用户易用性感知</strong><br>36条需求，25条7.0可落地；4条与模块沟通确认中；7条暂不处理
+        </div>
+        <div style="padding: 10px 14px; background: #f8fafc; border-radius: 8px; border-left: 3px solid var(--green);">
+          <strong>打磨重点场景细节体验</strong><br>会议场景+大学生场景走查，测试结束，问题持续滚动解决
+        </div>
+        <div style="padding: 10px 14px; background: #f8fafc; border-radius: 8px; border-left: 3px solid var(--yellow);">
+          <strong>找不到/不会用的功能</strong><br>聚焦"全搜"和"一句话设置"快速解决"找不到"问题（项目已发单至业务方）。全搜算法已迭代一版，验收中
+        </div>
+        <div style="padding: 10px 14px; background: #f8fafc; border-radius: 8px; border-left: 3px solid var(--accent);">
+          <strong>解决"小摩擦"</strong><br>36条需求，19条7.0前可落地；13条存在风险；4条7.0前无法上线
+        </div>
+      </div>
+      <div style="margin-top: 14px; padding: 12px 14px; background: #f0f9ff; border-radius: 8px; font-size: 13px; color: var(--text-secondary);">
+        <strong style="color: var(--blue);">本双周动态：</strong>双线并行走查机制确立（模块走查+场景任务走查）。大学生场景走查调研总结汇报已完成，大学生测试结束，问题持续滚动解决。场景走查待用研团队和涂部汇报后开始。
+      </div>
+    </div>
+  </div>
+
+  <!-- ====== TAB: 风险与关键节点 ====== -->
+  <div class="tab-content" id="tab-risk">
+    <div class="section">
+      <div class="section-title"><span class="dot"></span>风险与关注点</div>
+      <table>
+        <thead>
+          <tr><th style="width:10%">等级</th><th style="width:25%">事项</th><th>说明</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><span class="risk risk-low">🟢 低</span></td>
+            <td><strong>OS7o方向调整，里程碑重置</strong></td>
+            <td>一期项目（X500S/U）时间计划因需求范围未定，项目时间计划未定；二期项目（Fold7）产品内部对知识库是否纳入需求包仍存在争议，需求范围未锁定。PRD/策划/UI/动效基线全部待定，需重新排期</td>
+          </tr>
+          <tr>
+            <td><span class="risk risk-info">🔵 关注</span></td>
+            <td><strong>OS7.0多任务+AI需求暂停</strong></td>
+            <td>6月17日产品通知暂停，需关注后续是否移入回音计划</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="section">
+      <div class="section-title"><span class="dot"></span>下周关键节点</div>
+      <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 10px;">
+        <div style="padding: 14px 16px; background: #f8fafc; border-radius: 8px; border-left: 4px solid var(--yellow);">
+          <div style="font-size: 12px; color: var(--text-secondary);">8月19日</div>
+          <div style="font-weight: 600;">Pad原子笔记 第一版专项测试</div>
+        </div>
+        <div style="padding: 14px 16px; background: #f8fafc; border-radius: 8px; border-left: 4px solid var(--blue);">
+          <div style="font-size: 12px; color: var(--text-secondary);">8月20日</div>
+          <div style="font-weight: 600;">OS7.0 二期合格</div>
+        </div>
+        <div style="padding: 14px 16px; background: #f8fafc; border-radius: 8px; border-left: 4px solid var(--blue);">
+          <div style="font-size: 12px; color: var(--text-secondary);">8月21日</div>
+          <div style="font-weight: 600;">HIG 面向Lance汇报</div>
+        </div>
+        <div style="padding: 14px 16px; background: #f8fafc; border-radius: 8px; border-left: 4px solid var(--yellow);">
+          <div style="font-size: 12px; color: var(--text-secondary);">8月25日</div>
+          <div style="font-weight: 600;">OS7o 需求包锁定</div>
+        </div>
+        <div style="padding: 14px 16px; background: #f8fafc; border-radius: 8px; border-left: 4px solid var(--green);">
+          <div style="font-size: 12px; color: var(--text-secondary);">8月30日</div>
+          <div style="font-weight: 600;">HIG 官网预上线</div>
+        </div>
+        <div style="padding: 14px 16px; background: #f8fafc; border-radius: 8px; border-left: 4px solid var(--green);">
+          <div style="font-size: 12px; color: var(--text-secondary);">9月1日</div>
+          <div style="font-weight: 600;">HIG 官网上线</div>
+        </div>
+        <div style="padding: 14px 16px; background: #f8fafc; border-radius: 8px; border-left: 4px solid var(--green);">
+          <div style="font-size: 12px; color: var(--text-secondary);">9月16日</div>
+          <div style="font-weight: 600;">OS7.0 内测/OS发布会</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ====== TAB: 旗舰机型 ====== -->
+  <div class="tab-content" id="tab-flagship">
+    <div class="section">
+      <div class="section-title"><span class="dot"></span>近期旗舰机型时间</div>
+      <table>
+        <thead>
+          <tr><th>项目编号</th><th>外部名称</th><th>试产</th><th>首量</th><th>上市时间</th><th>备注</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>PD2606</td><td><strong>iQOO 16</strong></td><td>7/11</td><td>8/15</td><td>9月</td><td>🟡 即将上市</td></tr>
+          <tr><td>PD2602</td><td><strong>X500</strong></td><td>7/7</td><td>8/6</td><td>9月</td><td>🟡 即将上市</td></tr>
+          <tr style="opacity: 0.5;"><td>PD2571</td><td>S60</td><td>3/30</td><td>4/29</td><td>6月6日</td><td>✅ 已发布</td></tr>
+          <tr style="opacity: 0.5;"><td>PD2547</td><td>X300U</td><td>1/5</td><td>2/7</td><td>3月30日</td><td>✅ 已发布</td></tr>
+          <tr style="opacity: 0.5;"><td>PD2547F</td><td>X300U 外销</td><td>1/20</td><td>3/2</td><td>3月30日</td><td>✅ 已发布</td></tr>
+          <tr style="opacity: 0.5;"><td>PD2548</td><td>X300s</td><td>1/10</td><td>2/10</td><td>3月30日</td><td>✅ 已发布</td></tr>
+          <tr style="opacity: 0.5;"><td>PD2564</td><td>iQOO 15T</td><td>3/21</td><td>4/18</td><td>5月20日</td><td>✅ 已发布</td></tr>
+          <tr style="opacity: 0.5;"><td>DPD2540</td><td>Pad 6 Pro</td><td>2025/12/29</td><td>1/30</td><td>3月31日</td><td>✅ 已发布</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ====== TAB: 部门负荷 ====== -->
+  <div class="tab-content" id="tab-workload">
+    <div class="section" style="display:flex;justify-content:center;padding:20px;">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 700 355" width="700" height="355">
+<rect width="700" height="355" rx="12" fill="#ffffff"/>
+<text x="350.0" y="32" text-anchor="middle" font-size="20" font-weight="700" fill="#1a1a2e">部门负荷状态</text>
+<line x1="55" y1="313.0" x2="570" y2="313.0" stroke="#e5e7eb" stroke-width="1"/>
+<text x="47" y="317.0" text-anchor="end" font-size="12" fill="#6b7280">8.90</text>
+<line x1="55" y1="283.2" x2="570" y2="283.2" stroke="#e5e7eb" stroke-width="1"/>
+<text x="47" y="287.2" text-anchor="end" font-size="12" fill="#6b7280">9.00</text>
+<line x1="55" y1="253.4" x2="570" y2="253.4" stroke="#e5e7eb" stroke-width="1"/>
+<text x="47" y="257.4" text-anchor="end" font-size="12" fill="#6b7280">9.10</text>
+<line x1="55" y1="223.7" x2="570" y2="223.7" stroke="#e5e7eb" stroke-width="1"/>
+<text x="47" y="227.7" text-anchor="end" font-size="12" fill="#6b7280">9.20</text>
+<line x1="55" y1="193.9" x2="570" y2="193.9" stroke="#e5e7eb" stroke-width="1"/>
+<text x="47" y="197.9" text-anchor="end" font-size="12" fill="#6b7280">9.30</text>
+<line x1="55" y1="164.1" x2="570" y2="164.1" stroke="#e5e7eb" stroke-width="1"/>
+<text x="47" y="168.1" text-anchor="end" font-size="12" fill="#6b7280">9.40</text>
+<line x1="55" y1="134.3" x2="570" y2="134.3" stroke="#e5e7eb" stroke-width="1"/>
+<text x="47" y="138.3" text-anchor="end" font-size="12" fill="#6b7280">9.50</text>
+<line x1="55" y1="104.6" x2="570" y2="104.6" stroke="#e5e7eb" stroke-width="1"/>
+<text x="47" y="108.6" text-anchor="end" font-size="12" fill="#6b7280">9.60</text>
+<line x1="55" y1="74.8" x2="570" y2="74.8" stroke="#e5e7eb" stroke-width="1"/>
+<text x="47" y="78.8" text-anchor="end" font-size="12" fill="#6b7280">9.70</text>
+<line x1="55" y1="45.0" x2="570" y2="45.0" stroke="#e5e7eb" stroke-width="1"/>
+<text x="47" y="49.0" text-anchor="end" font-size="12" fill="#6b7280">9.80</text>
+<text x="55.0" y="333" text-anchor="middle" font-size="12" fill="#6b7280">1月</text>
+<text x="140.8" y="333" text-anchor="middle" font-size="12" fill="#6b7280">2月</text>
+<text x="226.7" y="333" text-anchor="middle" font-size="12" fill="#6b7280">3月</text>
+<text x="312.5" y="333" text-anchor="middle" font-size="12" fill="#6b7280">4月</text>
+<text x="398.3" y="333" text-anchor="middle" font-size="12" fill="#6b7280">5月</text>
+<text x="484.2" y="333" text-anchor="middle" font-size="12" fill="#6b7280">6月</text>
+<text x="570.0" y="333" text-anchor="middle" font-size="12" fill="#6b7280">7月</text>
+<line x1="55" y1="199.8" x2="570" y2="199.8" stroke="#9ca3af" stroke-width="2"/>
+<text x="575" y="203.8" font-size="11" fill="#6b7280">26年当前均值9.28</text>
+<polyline points="55.0,223.7 140.8,247.5 226.7,152.2 312.5,176.0 398.3,128.4 484.2,80.7 570.0,152.2" fill="none" stroke="#16a34a" stroke-width="2.5" stroke-dasharray="8,5"/>
+<circle cx="55.0" cy="223.7" r="4" fill="#fff" stroke="#16a34a" stroke-width="2"/>
+<circle cx="140.8" cy="247.5" r="4" fill="#fff" stroke="#16a34a" stroke-width="2"/>
+<circle cx="226.7" cy="152.2" r="4" fill="#fff" stroke="#16a34a" stroke-width="2"/>
+<circle cx="312.5" cy="176.0" r="4" fill="#fff" stroke="#16a34a" stroke-width="2"/>
+<circle cx="398.3" cy="128.4" r="4" fill="#fff" stroke="#16a34a" stroke-width="2"/>
+<circle cx="484.2" cy="80.7" r="4" fill="#fff" stroke="#16a34a" stroke-width="2"/>
+<circle cx="570.0" cy="152.2" r="4" fill="#fff" stroke="#16a34a" stroke-width="2"/>
+<polyline points="55.0,223.7 140.8,271.3 226.7,152.2 312.5,152.2 398.3,128.4 484.2,199.8 570.0,271.3" fill="none" stroke="#2563eb" stroke-width="3"/>
+<circle cx="55.0" cy="223.7" r="5" fill="#fff" stroke="#2563eb" stroke-width="2.5"/>
+<text x="55.0" y="245.7" text-anchor="middle" font-size="12" font-weight="600" fill="#2563eb" style="text-shadow: -1px -1px 0 #fff, 1px -1px 0 #fff, -1px 1px 0 #fff, 1px 1px 0 #fff;">9.20</text>
+<circle cx="140.8" cy="271.3" r="5" fill="#fff" stroke="#2563eb" stroke-width="2.5"/>
+<text x="140.8" y="293.3" text-anchor="middle" font-size="12" font-weight="600" fill="#2563eb" style="text-shadow: -1px -1px 0 #fff, 1px -1px 0 #fff, -1px 1px 0 #fff, 1px 1px 0 #fff;">9.04</text>
+<circle cx="226.7" cy="152.2" r="5" fill="#fff" stroke="#2563eb" stroke-width="2.5"/>
+<text x="226.7" y="174.2" text-anchor="middle" font-size="12" font-weight="600" fill="#2563eb" style="text-shadow: -1px -1px 0 #fff, 1px -1px 0 #fff, -1px 1px 0 #fff, 1px 1px 0 #fff;">9.44</text>
+<circle cx="312.5" cy="152.2" r="5" fill="#fff" stroke="#2563eb" stroke-width="2.5"/>
+<text x="312.5" y="136.2" text-anchor="middle" font-size="12" font-weight="600" fill="#2563eb" style="text-shadow: -1px -1px 0 #fff, 1px -1px 0 #fff, -1px 1px 0 #fff, 1px 1px 0 #fff;">9.44</text>
+<circle cx="398.3" cy="128.4" r="5" fill="#fff" stroke="#2563eb" stroke-width="2.5"/>
+<text x="398.3" y="150.4" text-anchor="middle" font-size="12" font-weight="600" fill="#2563eb" style="text-shadow: -1px -1px 0 #fff, 1px -1px 0 #fff, -1px 1px 0 #fff, 1px 1px 0 #fff;">9.52</text>
+<circle cx="484.2" cy="199.8" r="5" fill="#fff" stroke="#2563eb" stroke-width="2.5"/>
+<text x="484.2" y="221.8" text-anchor="middle" font-size="12" font-weight="600" fill="#2563eb" style="text-shadow: -1px -1px 0 #fff, 1px -1px 0 #fff, -1px 1px 0 #fff, 1px 1px 0 #fff;">9.28</text>
+<circle cx="570.0" cy="271.3" r="5" fill="#fff" stroke="#2563eb" stroke-width="2.5"/>
+<text x="570.0" y="293.3" text-anchor="middle" font-size="12" font-weight="600" fill="#2563eb" style="text-shadow: -1px -1px 0 #fff, 1px -1px 0 #fff, -1px 1px 0 #fff, 1px 1px 0 #fff;">9.04</text>
+<line x1="585" y1="60" x2="615" y2="60" stroke="#2563eb" stroke-width="3"/>
+<text x="621" y="64" font-size="12" fill="#2563eb">当月日均工时</text>
+<text x="621" y="78" font-size="10" fill="#9ca3af">(小时)</text>
+<line x1="585" y1="100" x2="615" y2="100" stroke="#16a34a" stroke-width="2.5" stroke-dasharray="8,5"/>
+<text x="621" y="104" font-size="12" fill="#16a34a">上年同期数据</text>
+<line x1="585" y1="135" x2="615" y2="135" stroke="#9ca3af" stroke-width="2"/>
+<text x="621" y="139" font-size="12" fill="#6b7280">26年当前均值</text>
+<text x="350.0" y="350" text-anchor="middle" font-size="11" fill="#9ca3af">—数据源取自HR工时系统</text>
+</svg>
+    </div>
+  </div>
+
+  <div class="footer">OS交互设计部 · 项目周报 · 2026年8月18日更新</div>
+
+</div>
+
+<script>
+function switchTab(tabId) {
+  document.querySelectorAll('.stat-card').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+  document.getElementById('tab-' + tabId).classList.add('active');
+  var nav = document.getElementById('nav-' + tabId);
+  if (nav) nav.classList.add('active');
+}
+</script>
+</body>
+</html>
